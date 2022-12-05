@@ -1,10 +1,13 @@
 import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './errors/all-exceptions.filter';
 const start = async () => {
   try {
     const PORT = process.env.PORT || 3333;
     const app = await NestFactory.create(AppModule);
+    const adapterHost = app.get(HttpAdapterHost);
+    app.useGlobalFilters(new AllExceptionsFilter(adapterHost));
     // app.useGlobalPipes(new ValidationPipe());
 
     await app.listen(PORT, () => {

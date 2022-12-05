@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
@@ -11,7 +15,7 @@ export class AuthService {
     private prismaService: PrismaService,
     private jwtService: JwtService,
   ) {}
-  async singup(authDto: AuthDto): Promise<Tokens> {
+  async signup(authDto: AuthDto): Promise<Tokens> {
     const candidate = await this.prismaService.user.findUnique({
       where: {
         email: authDto.email,
@@ -30,6 +34,61 @@ export class AuthService {
     const tokens = await this.getTokens(newUser.id, newUser.email);
     await this.updateRefreshTokenHash(newUser.id, tokens.refresh_token);
     return tokens;
+  }
+
+  async refreshTokens(userId: number, refreshToken: string): Promise<Tokens> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user || !user.hashedRefreshToken) {
+      throw new ForbiddenException('Access denied');
+    }
+
+
+    const rMatches = await bcrypt.compare(
+      refreshToken,
+      user.hashedRefreshToken,
+    );
+
+    if (!rMatches) throw new ForbiddenException('Access denied');
+
+    const tokens = await this.getTokens(user.id, user.email);
+    await this.updateRefreshTokenHash(user.id, tokens.refresh_token);
+    return tokens;
+  }
+
+  async signin(authDto: AuthDto): Promise<Tokens> {
+    const { email, password } = authDto;
+    const user = await this.prismaService.user.findUnique({
+      where: { email },
+    });
+    if (!user) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.hashedPassword);
+    if (!passwordMatches) throw new ForbiddenException('Access Denied');
+
+    const tokens = await this.getTokens(user.id, user.email);
+    await this.updateRefreshTokenHash(user.id, tokens.refresh_token);
+    return tokens;
+  }
+
+  async logout(userId: number) {
+    const user = await this.prismaService.user.updateMany({
+      where: {
+        id: Number(userId),
+        hashedRefreshToken: {
+          not: null,
+        },
+      },
+      data: {
+        hashedRefreshToken: null,
+      },
+    });
+    console.log(user);
+    if (!user) throw new ForbiddenException('access denied');
+    return true;
   }
 
   async getTokens(userId: number, email: string): Promise<Tokens> {
