@@ -17,9 +17,9 @@ import {
   providers: [
     AuthService,
     AccessTokenStrategy,
-    RefreshTokenFromBearerStrategy,
     RefreshTokenFromCookiesStrategy,
-    // { provide: APP_GUARD, useClass: AccessTokenGuard },
+    RefreshTokenFromBearerStrategy,
+    { provide: APP_GUARD, useClass: AccessTokenGuard },
   ],
 })
 export class AuthModule {}

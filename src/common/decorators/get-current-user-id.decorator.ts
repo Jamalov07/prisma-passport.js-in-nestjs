@@ -4,9 +4,10 @@ import { JwtPayload } from '../../auth/types';
 export const GetCurrentUserId = createParamDecorator(
   async (_: undefined, context: ExecutionContext): Promise<number> => {
         const request = context.switchToHttp().getRequest();
-        console.log("userr")
+        console.log(context)
         
-    const user =await request.user as JwtPayload;
+    const user = request.user as JwtPayload;
+    console.log(user);
         return user.sub;
   },
 );

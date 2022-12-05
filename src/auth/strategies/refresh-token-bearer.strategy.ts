@@ -12,14 +12,13 @@ export class RefreshTokenFromBearerStrategy extends PassportStrategy(
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: process.env.ACCESS_TOKEN_KEY,
+      secretOrKey: process.env.REFRESH_TOKEN_KEY,
       passReqToCallback: true,
     });
   }
   validate(req: Request, payload: JwtPayload): JwtPayloadWithRefreshToken {
     const authHeader = req.headers.authorization;
       const refreshToken = authHeader.split(' ')[1];
-    //   console.log("assa")
     if (!refreshToken) throw new ForbiddenException('Refresh token notogri');
     return { ...payload, refreshToken };
   }

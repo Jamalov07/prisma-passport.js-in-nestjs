@@ -43,11 +43,11 @@ export class AuthController {
     return this.authService.logout(userId);
   }
 
-  // @Public()
-  // @UseGuards(RefreshTokenGuard)
+  @Public()
+  @UseGuards(RefreshTokenGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refreshToken(
+  async refreshTokens(
     @GetCurrentUserId() userId: number,
     @GetCurrentUser('refreshToken') refreshToken: string,
   ): Promise<Tokens> {
