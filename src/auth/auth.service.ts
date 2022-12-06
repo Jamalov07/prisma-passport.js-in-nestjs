@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { AuthDto } from './dto';
 import { JwtPayload, Tokens } from './types';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -15,7 +16,7 @@ export class AuthService {
     private prismaService: PrismaService,
     private jwtService: JwtService,
   ) {}
-  async signup(authDto: AuthDto): Promise<Tokens> {
+  async signup(authDto: AuthDto, res: Response): Promise<Tokens> {
     const candidate = await this.prismaService.user.findUnique({
       where: {
         email: authDto.email,
@@ -33,31 +34,15 @@ export class AuthService {
     });
     const tokens = await this.getTokens(newUser.id, newUser.email);
     await this.updateRefreshTokenHash(newUser.id, tokens.refresh_token);
-    return tokens;
-  }
 
-  async refreshTokens(userId: number, refreshToken: string): Promise<Tokens> {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
+    res.cookie('refresh_token', tokens.refresh_token, {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
     });
-    if (!user || !user.hashedRefreshToken) {
-      throw new ForbiddenException('Access denied');
-    }
-
-
-    const rMatches = await bcrypt.compare(
-      refreshToken,
-      user.hashedRefreshToken,
-    );
-
-    if (!rMatches) throw new ForbiddenException('Access denied');
-
-    const tokens = await this.getTokens(user.id, user.email);
-    await this.updateRefreshTokenHash(user.id, tokens.refresh_token);
     return tokens;
   }
 
-  async signin(authDto: AuthDto): Promise<Tokens> {
+  async signin(authDto: AuthDto, res: Response): Promise<Tokens> {
     const { email, password } = authDto;
     const user = await this.prismaService.user.findUnique({
       where: { email },
@@ -71,10 +56,42 @@ export class AuthService {
 
     const tokens = await this.getTokens(user.id, user.email);
     await this.updateRefreshTokenHash(user.id, tokens.refresh_token);
+    res.cookie('refresh_token', tokens.refresh_token, {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+    });
     return tokens;
   }
 
-  async logout(userId: number) {
+  async refreshTokens(
+    userId: number,
+    refreshToken: string,
+    res: Response,
+  ): Promise<Tokens> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user || !user.hashedRefreshToken) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const rMatches = await bcrypt.compare(
+      refreshToken,
+      user.hashedRefreshToken,
+    );
+
+    if (!rMatches) throw new ForbiddenException('Access denied');
+
+    const tokens = await this.getTokens(user.id, user.email);
+    await this.updateRefreshTokenHash(user.id, tokens.refresh_token);
+    res.cookie('refresh_token', tokens.refresh_token, {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+    });
+    return tokens;
+  }
+
+  async logout(userId: number, res: Response) {
     const user = await this.prismaService.user.updateMany({
       where: {
         id: Number(userId),
@@ -86,7 +103,7 @@ export class AuthService {
         hashedRefreshToken: null,
       },
     });
-    console.log(user);
+    res.clearCookie('refresh_token');
     if (!user) throw new ForbiddenException('access denied');
     return true;
   }

@@ -7,8 +7,6 @@ export const GetCurrentUser = createParamDecorator(
     context: ExecutionContext,
   ) => {
     const request = context.switchToHttp().getRequest();
-    console.log(data);
-    console.log(request.user, '112');
     if (!data) return request.user;
     return request.user[data];
   },

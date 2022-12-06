@@ -3,7 +3,6 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
-  Param,
   Post,
   Res,
   UseGuards,
@@ -22,15 +21,21 @@ export class AuthController {
   @Public()
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
-  singup(@Body() authDto: AuthDto): Promise<Tokens> {
-    return this.authService.signup(authDto);
+  signup(
+    @Body() authDto: AuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<Tokens> {
+    return this.authService.signup(authDto, res);
   }
 
   @Public()
   @Post('signin')
   @HttpCode(HttpStatus.OK)
-  async signin(@Body() authDto: AuthDto): Promise<Tokens> {
-    return await this.authService.signin(authDto);
+  async signin(
+    @Body() authDto: AuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<Tokens> {
+    return await this.authService.signin(authDto, res);
   }
 
   @Post('logout')
@@ -39,8 +44,7 @@ export class AuthController {
     @GetCurrentUserId() userId: number,
     @Res({ passthrough: true }) res: Response,
   ): Promise<boolean> {
-    // res.clearCookie('refresh_token');
-    return this.authService.logout(userId);
+    return this.authService.logout(userId, res);
   }
 
   @Public()
@@ -50,8 +54,8 @@ export class AuthController {
   async refreshTokens(
     @GetCurrentUserId() userId: number,
     @GetCurrentUser('refreshToken') refreshToken: string,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<Tokens> {
-    console.log(refreshToken,"112344");
-    return this.authService.refreshTokens(userId, refreshToken);
+    return this.authService.refreshTokens(userId, refreshToken,res);
   }
 }
